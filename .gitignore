@@ -1,0 +1,316 @@
+# Augment Telemetry Cleaner - .gitignore
+# =====================================
+# Comprehensive gitignore for Go desktop GUI application
+# Excludes build artifacts, development files, and runtime-generated content
+
+# =============================================================================
+# BUILD ARTIFACTS & EXECUTABLES
+# =============================================================================
+
+# Compiled binaries and executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+augment-telemetry-cleaner
+augment-telemetry-cleaner.exe
+augment-cleaner
+augment-cleaner.exe
+
+# Build output directories
+/build/
+/dist/
+/bin/
+/out/
+
+# Cross-compilation artifacts
+*-windows-*
+*-linux-*
+*-darwin-*
+*-amd64*
+*-arm64*
+*-386*
+
+# =============================================================================
+# GO-SPECIFIC FILES
+# =============================================================================
+
+# Go module cache and vendor
+/vendor/
+go.work
+go.work.sum
+
+# Test coverage files
+*.out
+coverage.txt
+coverage.html
+coverage.xml
+profile.cov
+
+# Go build cache
+.cache/
+
+# Delve debugger
+__debug_bin
+
+# Go workspace file
+go.work
+
+# =============================================================================
+# DEVELOPMENT & IDE FILES
+# =============================================================================
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# GoLand / IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim/Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+tags
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Atom
+.atom/
+
+# Eclipse
+.project
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# =============================================================================
+# OPERATING SYSTEM FILES
+# =============================================================================
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# TEMPORARY & LOG FILES
+# =============================================================================
+
+# Application logs
+*.log
+logs/
+log/
+
+# Backup files (created by the application)
+*.bak.*
+*_backup_*
+backup_*
+backups/
+
+# Temporary directories and files
+tmp/
+temp/
+.tmp/
+.temp/
+*.tmp
+*.temp
+
+# Crash dumps
+*.dmp
+core.*
+
+# =============================================================================
+# APPLICATION-SPECIFIC FILES
+# =============================================================================
+
+# Configuration files with sensitive data
+config.local.json
+config.dev.json
+config.prod.json
+.env
+.env.local
+.env.development
+.env.production
+
+# User-generated backups and data
+/Augment-Telemetry-Backups/
+*-backups/
+user-backups/
+
+# Application state and cache
+.cache/
+cache/
+state/
+.state/
+
+# Test output and fixtures
+test-output/
+test-fixtures/
+testdata/output/
+
+# Application-generated files
+storage_backup_*
+machine_id_backup_*
+workspace_backup_*
+*.vscdb.bak.*
+*.json.bak.*
+
+# =============================================================================
+# DEPENDENCIES & PACKAGE MANAGERS
+# =============================================================================
+
+# Node.js (if web components are added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+package-lock.json
+yarn.lock
+
+# Python (if any Python tools are used)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# =============================================================================
+# SECURITY & SENSITIVE DATA
+# =============================================================================
+
+# API keys and secrets
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+credentials.json
+
+# Database files (if any local databases are used)
+*.db
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# DOCUMENTATION BUILD
+# =============================================================================
+
+# Generated documentation
+/docs/build/
+/docs/_build/
+site/
+
+# =============================================================================
+# TESTING & CI/CD
+# =============================================================================
+
+# Test results
+test-results/
+test-reports/
+junit.xml
+
+# CI/CD artifacts
+.github/workflows/artifacts/
+.gitlab-ci-local/
+
+# =============================================================================
+# MISCELLANEOUS
+# =============================================================================
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Large files that shouldn't be in git
+*.iso
+*.dmg
+*.img
+
+# Editor backup files
+*.orig
+*.rej
+
+# Patch files
+*.patch
+*.diff
+
+# Local development scripts
+dev-*
+local-*
+run-local.*
+
+# Performance profiling
+*.prof
+*.pprof
+cpu.prof
+mem.prof
+block.prof
+mutex.prof
