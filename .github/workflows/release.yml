@@ -14,22 +14,18 @@ jobs:
             goos: linux
             goarch: amd64
             output: augment-telemetry-cleaner-linux-amd64
-            cc: gcc
-          - os: ubuntu-latest
+          - os: windows-latest
             goos: windows
             goarch: amd64
             output: augment-telemetry-cleaner-windows-amd64.exe
-            cc: x86_64-w64-mingw32-gcc
           - os: macos-latest
             goos: darwin
             goarch: amd64
             output: augment-telemetry-cleaner-darwin-amd64
-            cc: clang
           - os: macos-latest
             goos: darwin
             goarch: arm64
             output: augment-telemetry-cleaner-darwin-arm64
-            cc: clang
 
     runs-on: ${{ matrix.os }}
     permissions:
@@ -44,24 +40,64 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Install cross-compilation tools (Ubuntu)
+      - name: Install Linux GUI dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64-x86-64
+          sudo apt-get install -y \
+            libgl1-mesa-dev \
+            xorg-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libglfw3-dev \
+            libgles2-mesa-dev \
+            libegl1-mesa-dev \
+            pkg-config
+
+      - name: Install Windows dependencies
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Windows has built-in OpenGL support, no additional packages needed
+          echo "Windows build environment ready"
+
+      - name: Install macOS dependencies
+        if: matrix.os == 'macos-latest'
+        run: |
+          # macOS has built-in OpenGL support, no additional packages needed
+          echo "macOS build environment ready"
 
       - name: Create dist directory
         run: mkdir -p dist
 
-      - name: Build binary
+      - name: Build binary (Linux)
+        if: matrix.os == 'ubuntu-latest'
         env:
+          CGO_ENABLED: 1
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+        run: go build -ldflags="-s -w" -o dist/${{ matrix.output }} .
+
+      - name: Build binary (Windows)
+        if: matrix.os == 'windows-latest'
+        env:
           CGO_ENABLED: 1
-          CC: ${{ matrix.cc }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -ldflags="-s -w" -o dist/${{ matrix.output }} .
+
+      - name: Build binary (macOS)
+        if: matrix.os == 'macos-latest'
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: go build -ldflags="-s -w" -o dist/${{ matrix.output }} .
 
       - name: Verify binary exists
+        shell: bash
         run: |
           if [ ! -f "dist/${{ matrix.output }}" ]; then
             echo "Error: Binary dist/${{ matrix.output }} was not created"
@@ -89,6 +125,11 @@ jobs:
           path: dist/
           merge-multiple: true
 
+      - name: List downloaded artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find dist/ -type f -exec ls -la {} \;
+
       - name: Verify all binaries
         run: |
           echo "Checking for required binaries..."
@@ -99,13 +140,23 @@ jobs:
             "augment-telemetry-cleaner-darwin-arm64"
           )
 
+          missing_files=()
           for file in "${required_files[@]}"; do
             if [ ! -f "dist/$file" ]; then
-              echo "Error: Required binary $file is missing"
-              exit 1
+              echo "❌ Missing: $file"
+              missing_files+=("$file")
+            else
+              size=$(stat -c%s "dist/$file" 2>/dev/null || stat -f%z "dist/$file" 2>/dev/null || echo "unknown")
+              echo "✅ Found: $file ($size bytes)"
             fi
-            echo "✓ Found: $file ($(stat -c%s "dist/$file" 2>/dev/null || stat -f%z "dist/$file") bytes)"
           done
+
+          if [ ${#missing_files[@]} -ne 0 ]; then
+            echo "Error: Missing required binaries: ${missing_files[*]}"
+            exit 1
+          fi
+
+          echo "All required binaries are present!"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -118,5 +169,28 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+          body: |
+            ## Augment Telemetry Cleaner Release
+
+            Cross-platform desktop application for cleaning Augment telemetry data from VS Code.
+
+            ### Downloads
+            - **Windows (64-bit)**: `augment-telemetry-cleaner-windows-amd64.exe`
+            - **Linux (64-bit)**: `augment-telemetry-cleaner-linux-amd64`
+            - **macOS Intel (64-bit)**: `augment-telemetry-cleaner-darwin-amd64`
+            - **macOS Apple Silicon (ARM64)**: `augment-telemetry-cleaner-darwin-arm64`
+
+            ### Features
+            - 🖥️ Modern GUI built with Fyne
+            - 🔒 Safety features (dry-run mode, backups, confirmations)
+            - 📝 Comprehensive logging and progress tracking
+            - 🎯 Cross-platform support
+
+            ### Usage
+            1. Download the appropriate binary for your platform
+            2. Make it executable (Linux/macOS): `chmod +x augment-telemetry-cleaner-*`
+            3. Run the application
+
+            **Note**: On macOS, you may need to allow the app in System Preferences > Security & Privacy if you get a security warning.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
