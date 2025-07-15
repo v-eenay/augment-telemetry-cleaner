@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            output: augment-telemetry-cleaner-linux-amd64
+            cc: gcc
+          - os: ubuntu-latest
+            goos: windows
+            goarch: amd64
+            output: augment-telemetry-cleaner-windows-amd64.exe
+            cc: x86_64-w64-mingw32-gcc
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            output: augment-telemetry-cleaner-darwin-amd64
+            cc: clang
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            output: augment-telemetry-cleaner-darwin-arm64
+            cc: clang
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install cross-compilation tools (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64
+
+      - name: Create dist directory
+        run: mkdir -p dist
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
+          CC: ${{ matrix.cc }}
+        run: go build -ldflags="-s -w" -o dist/${{ matrix.output }} .
+
+      - name: Verify binary exists
+        run: |
+          if [ ! -f "dist/${{ matrix.output }}" ]; then
+            echo "Error: Binary dist/${{ matrix.output }} was not created"
+            exit 1
+          fi
+          ls -la dist/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: dist/${{ matrix.output }}
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Verify all binaries
+        run: |
+          echo "Checking for required binaries..."
+          required_files=(
+            "augment-telemetry-cleaner-linux-amd64"
+            "augment-telemetry-cleaner-windows-amd64.exe"
+            "augment-telemetry-cleaner-darwin-amd64"
+            "augment-telemetry-cleaner-darwin-arm64"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "dist/$file" ]; then
+              echo "Error: Required binary $file is missing"
+              exit 1
+            fi
+            echo "✓ Found: $file ($(stat -c%s "dist/$file" 2>/dev/null || stat -f%z "dist/$file") bytes)"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/augment-telemetry-cleaner-windows-amd64.exe
+            dist/augment-telemetry-cleaner-linux-amd64
+            dist/augment-telemetry-cleaner-darwin-amd64
+            dist/augment-telemetry-cleaner-darwin-arm64
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
