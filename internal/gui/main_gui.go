@@ -192,7 +192,7 @@ func (g *MainGUI) createFooter() fyne.CanvasObject {
 		nil,
 		nil,
 		container.NewHBox(aboutBtn, settingsBtn, exitBtn),
-		widget.NewLabel("© 2024 Augment Telemetry Cleaner v2.0.0 - Vinay Koirala"),
+		widget.NewLabel("© 2025 Augment Telemetry Cleaner v1.0.0 - Vinay Koirala"),
 	)
 }
 
@@ -267,7 +267,7 @@ Email: koiralavinay@gmail.com
 GitHub: github.com/v-eenay
 LinkedIn: linkedin.com/in/veenay
 
-© 2024 Vinay Koirala`
+© 2025 Vinay Koirala`
 
 	dialog.ShowInformation("About", aboutText, g.window)
 }
