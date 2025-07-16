@@ -30,6 +30,7 @@ type MainGUI struct {
 	modifyTelemetryBtn  *widget.Button
 	cleanDatabaseBtn    *widget.Button
 	cleanWorkspaceBtn   *widget.Button
+	cleanBrowserBtn     *widget.Button
 	runAllBtn          *widget.Button
 
 	// Mode selection
@@ -94,6 +95,7 @@ func (g *MainGUI) initializeComponents() {
 	g.modifyTelemetryBtn = widget.NewButton("Modify Telemetry IDs", g.onModifyTelemetry)
 	g.cleanDatabaseBtn = widget.NewButton("Clean Database", g.onCleanDatabase)
 	g.cleanWorkspaceBtn = widget.NewButton("Clean Workspace", g.onCleanWorkspace)
+	g.cleanBrowserBtn = widget.NewButton("Clean Browser Data", g.onCleanBrowser)
 	g.runAllBtn = widget.NewButton("Run All Operations", g.onRunAll)
 
 	// Style the main action button
@@ -144,6 +146,7 @@ func (g *MainGUI) BuildUI() fyne.CanvasObject {
 			g.modifyTelemetryBtn,
 			g.cleanDatabaseBtn,
 			g.cleanWorkspaceBtn,
+			g.cleanBrowserBtn,
 			widget.NewSeparator(),
 			g.runAllBtn,
 		))
@@ -234,6 +237,22 @@ func (g *MainGUI) onCleanWorkspace() {
 	}
 
 	go g.runCleanWorkspace()
+}
+
+func (g *MainGUI) onCleanBrowser() {
+	if g.isRunning {
+		return
+	}
+
+	config := g.configManager.GetConfig()
+	if config.RequireConfirmation && !g.showConfirmationDialog("Clean Browser Data",
+		"This will remove Augment-related data from your browsers (cookies, storage, cache).\n\n"+
+		"⚠️ WARNING: Please close all browsers before proceeding.\n\n"+
+		"Continue?") {
+		return
+	}
+
+	go g.runCleanBrowser()
 }
 
 func (g *MainGUI) onRunAll() {

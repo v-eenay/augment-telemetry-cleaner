@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -67,6 +68,44 @@ func VerifyBackup(backupPath string) error {
 		return fmt.Errorf("backup file not readable: %w", err)
 	}
 	file.Close()
+
+	return nil
+}
+
+// CopyFile copies a file from source to destination
+func CopyFile(src, dst string) error {
+	// Create destination directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	// Open source file
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer sourceFile.Close()
+
+	// Create destination file
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	// Copy file contents
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		// Clean up incomplete file
+		os.Remove(dst)
+		return fmt.Errorf("failed to copy file contents: %w", err)
+	}
+
+	// Copy file permissions
+	sourceInfo, err := sourceFile.Stat()
+	if err == nil {
+		destFile.Chmod(sourceInfo.Mode())
+	}
 
 	return nil
 }

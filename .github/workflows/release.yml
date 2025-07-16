@@ -55,7 +55,9 @@ jobs:
             libglfw3-dev \
             libgles2-mesa-dev \
             libegl1-mesa-dev \
-            pkg-config
+            pkg-config \
+            inkscape \
+            imagemagick
 
       - name: Install Windows dependencies
         if: matrix.os == 'windows-latest'
@@ -72,6 +74,10 @@ jobs:
       - name: Create dist directory
         run: mkdir -p dist
 
+      - name: Generate platform-specific icons
+        run: |
+          go run scripts/generate-icons.go
+
       - name: Build binary (Linux)
         if: matrix.os == 'ubuntu-latest'
         env:
@@ -86,7 +92,15 @@ jobs:
           CGO_ENABLED: 1
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -ldflags="-s -w" -o dist/${{ matrix.output }} .
+        run: |
+          # Build with version information
+          go build -ldflags="-s -w -X main.version=1.0.0 -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/${{ matrix.output }} .
+
+      - name: Sign Windows binary
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          .\scripts\sign-windows.ps1 -BinaryPath "dist\${{ matrix.output }}" -CertificateBase64 "${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}" -CertificatePassword "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}" -CertificateName "${{ secrets.WINDOWS_CERTIFICATE_NAME }}"
 
       - name: Build binary (macOS)
         if: matrix.os == 'macos-latest'
@@ -94,7 +108,15 @@ jobs:
           CGO_ENABLED: 1
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -ldflags="-s -w" -o dist/${{ matrix.output }} .
+        run: |
+          # Build with version information
+          go build -ldflags="-s -w -X main.version=1.0.0 -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/${{ matrix.output }} .
+
+      - name: Sign macOS binary
+        if: matrix.os == 'macos-latest'
+        run: |
+          chmod +x scripts/sign-macos.sh
+          ./scripts/sign-macos.sh "dist/${{ matrix.output }}" "${{ secrets.MACOS_CERTIFICATE_BASE64 }}" "${{ secrets.MACOS_CERTIFICATE_PASSWORD }}" "${{ secrets.MACOS_KEYCHAIN_PASSWORD }}" "${{ secrets.APPLE_ID }}" "${{ secrets.APPLE_ID_PASSWORD }}" "${{ secrets.APPLE_TEAM_ID }}"
 
       - name: Verify binary exists
         shell: bash

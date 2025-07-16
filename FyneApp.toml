@@ -1,0 +1,35 @@
+[Details]
+Icon = "assets/icon.svg"
+Name = "Augment Telemetry Cleaner"
+ID = "com.vinaykoirala.augmenttelemetrycleaner"
+Version = "1.0.0"
+
+[Information]
+Author = "Vinay Koirala"
+Email = "koiralavinay@gmail.com"
+Website = "https://github.com/v-eenay/augment-telemetry-cleaner"
+Category = "Utility"
+Description = "A desktop application for cleaning Augment telemetry data from VS Code, enabling fresh development sessions."
+
+[Development]
+Build = "go build -ldflags='-s -w' -o augment-telemetry-cleaner ."
+
+[Windows]
+Console = false
+CompanyName = "Vinay Koirala"
+ProductName = "Augment Telemetry Cleaner"
+FileDescription = "Augment Telemetry Cleaner - Clean VS Code telemetry data"
+FileVersion = "1.0.0.0"
+ProductVersion = "1.0.0"
+Copyright = "© 2025 Vinay Koirala"
+
+[macOS]
+Category = "public.app-category.utilities"
+Copyright = "© 2025 Vinay Koirala"
+Identifier = "com.vinaykoirala.augmenttelemetrycleaner"
+
+[Linux]
+GenericName = "Telemetry Cleaner"
+Comment = "Clean Augment telemetry data from VS Code"
+Categories = "Utility;System;"
+Keywords = "telemetry;privacy;vscode;augment;cleaner;"

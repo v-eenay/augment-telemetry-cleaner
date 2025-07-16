@@ -6,6 +6,7 @@ import (
 
 	"fyne.io/fyne/v2/dialog"
 
+	"augment-telemetry-cleaner/internal/browser"
 	"augment-telemetry-cleaner/internal/cleaner"
 	"augment-telemetry-cleaner/internal/utils"
 )
@@ -117,6 +118,89 @@ func (g *MainGUI) runCleanWorkspace() {
 	g.setResults(fmt.Sprintf("Workspace Cleaned Successfully:\n%s", string(resultJSON)))
 }
 
+// runCleanBrowser executes the browser data cleaning operation
+func (g *MainGUI) runCleanBrowser() {
+	g.setOperationState(true, "Cleaning browser data...")
+	defer g.setOperationState(false, "Ready")
+
+	config := g.configManager.GetConfig()
+	g.logger.LogOperation("Clean Browser Data")
+
+	if config.DryRunMode {
+		browserCleaner, err := browser.NewBrowserCleaner()
+		if err != nil {
+			g.logger.Error("Failed to create browser cleaner: %v", err)
+			g.showErrorDialog("Browser Cleaner Failed", err.Error())
+			return
+		}
+
+		counts, err := browserCleaner.GetBrowserDataCount()
+		if err != nil {
+			g.logger.Error("Failed to count browser data: %v", err)
+			g.showErrorDialog("Browser Count Failed", err.Error())
+			return
+		}
+
+		totalCount := int64(0)
+		for _, count := range counts {
+			totalCount += count
+		}
+
+		g.logger.Info("DRY RUN MODE: Would clean %d browser data items", totalCount)
+
+		countsJSON, _ := json.MarshalIndent(counts, "", "  ")
+		g.setResults(fmt.Sprintf("DRY RUN: Would clean browser data:\n%s\n\nTotal items: %d", string(countsJSON), totalCount))
+		return
+	}
+
+	browserCleaner, err := browser.NewBrowserCleaner()
+	if err != nil {
+		g.logger.LogOperationResult("Clean Browser Data", false, err.Error())
+		g.showErrorDialog("Browser Cleaner Failed", err.Error())
+		return
+	}
+
+	results, err := browserCleaner.CleanBrowserData(config.CreateBackups)
+	if err != nil {
+		g.logger.LogOperationResult("Clean Browser Data", false, err.Error())
+		g.showErrorDialog("Browser Cleaning Failed", err.Error())
+		return
+	}
+
+	// Process results
+	totalCookies := int64(0)
+	totalStorage := int64(0)
+	totalCache := int64(0)
+	var allErrors []string
+
+	for _, result := range results {
+		totalCookies += result.CookiesDeleted
+		totalStorage += result.StorageDeleted
+		totalCache += result.CacheDeleted
+
+		if result.BackupPath != "" {
+			g.logger.LogBackupCreated("browser-"+result.Profile.Name, result.BackupPath)
+		}
+
+		for _, err := range result.Errors {
+			allErrors = append(allErrors, fmt.Sprintf("%s: %s", result.Profile.Name, err))
+		}
+	}
+
+	// Log results
+	successMsg := fmt.Sprintf("Cleaned %d cookies, %d storage items, %d cache items", totalCookies, totalStorage, totalCache)
+	g.logger.LogOperationResult("Clean Browser Data", len(allErrors) == 0, successMsg)
+
+	// Log any errors
+	for _, err := range allErrors {
+		g.logger.Error("Browser cleaning error: %s", err)
+	}
+
+	// Display results
+	resultJSON, _ := json.MarshalIndent(results, "", "  ")
+	g.setResults(fmt.Sprintf("Browser Data Cleaned:\n%s", string(resultJSON)))
+}
+
 // runAllOperations executes all cleaning operations in sequence
 func (g *MainGUI) runAllOperations() {
 	g.setOperationState(true, "Running all operations...")
@@ -125,19 +209,24 @@ func (g *MainGUI) runAllOperations() {
 	g.logger.LogOperation("Run All Operations")
 
 	// Step 1: Modify Telemetry IDs
-	g.setStatus("Step 1/3: Modifying telemetry IDs...")
+	g.setStatus("Step 1/4: Modifying telemetry IDs...")
 	g.setProgress(0.1)
 	g.runModifyTelemetryInternal()
-	g.setProgress(0.33)
+	g.setProgress(0.25)
 
 	// Step 2: Clean Database
-	g.setStatus("Step 2/3: Cleaning database...")
+	g.setStatus("Step 2/4: Cleaning database...")
 	g.runCleanDatabaseInternal()
-	g.setProgress(0.66)
+	g.setProgress(0.5)
 
 	// Step 3: Clean Workspace
-	g.setStatus("Step 3/3: Cleaning workspace...")
+	g.setStatus("Step 3/4: Cleaning workspace...")
 	g.runCleanWorkspaceInternal()
+	g.setProgress(0.75)
+
+	// Step 4: Clean Browser Data
+	g.setStatus("Step 4/4: Cleaning browser data...")
+	g.runCleanBrowserInternal()
 	g.setProgress(1.0)
 
 	g.logger.LogOperationResult("Run All Operations", true, "All operations completed")
@@ -193,6 +282,37 @@ func (g *MainGUI) runCleanWorkspaceInternal() {
 	g.logger.LogBackupCreated("workspace", result.BackupPath)
 }
 
+func (g *MainGUI) runCleanBrowserInternal() {
+	config := g.configManager.GetConfig()
+	if config.DryRunMode {
+		g.logger.Info("DRY RUN: Skipping browser cleaning")
+		return
+	}
+
+	browserCleaner, err := browser.NewBrowserCleaner()
+	if err != nil {
+		g.logger.Error("Browser cleaner creation failed: %v", err)
+		return
+	}
+
+	results, err := browserCleaner.CleanBrowserData(config.CreateBackups)
+	if err != nil {
+		g.logger.Error("Browser cleaning failed: %v", err)
+		return
+	}
+
+	// Count total items cleaned
+	totalItems := int64(0)
+	for _, result := range results {
+		totalItems += result.CookiesDeleted + result.StorageDeleted + result.CacheDeleted
+		if result.BackupPath != "" {
+			g.logger.LogBackupCreated("browser-"+result.Profile.Name, result.BackupPath)
+		}
+	}
+
+	g.logger.Info("Browser data cleaned successfully, processed %d items", totalItems)
+}
+
 // Helper methods for UI state management
 func (g *MainGUI) setOperationState(running bool, status string) {
 	g.isRunning = running
@@ -211,6 +331,7 @@ func (g *MainGUI) disableButtons() {
 	g.modifyTelemetryBtn.Disable()
 	g.cleanDatabaseBtn.Disable()
 	g.cleanWorkspaceBtn.Disable()
+	g.cleanBrowserBtn.Disable()
 	g.runAllBtn.Disable()
 }
 
@@ -218,6 +339,7 @@ func (g *MainGUI) enableButtons() {
 	g.modifyTelemetryBtn.Enable()
 	g.cleanDatabaseBtn.Enable()
 	g.cleanWorkspaceBtn.Enable()
+	g.cleanBrowserBtn.Enable()
 	g.runAllBtn.Enable()
 }
 
