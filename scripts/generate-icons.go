@@ -160,23 +160,29 @@ func generateMacOSICNS(iconsDir string) {
 	}
 	
 	// Copy PNG files to iconset with proper naming
-	iconsetFiles := map[string]string{
-		"icon-16.png":   "icon_16x16.png",
-		"icon-32.png":   "icon_16x16@2x.png",
-		"icon-32.png":   "icon_32x32.png",
-		"icon-64.png":   "icon_32x32@2x.png",
-		"icon-128.png":  "icon_128x128.png",
-		"icon-256.png":  "icon_128x128@2x.png",
-		"icon-256.png":  "icon_256x256.png",
-		"icon-512.png":  "icon_256x256@2x.png",
-		"icon-512.png":  "icon_512x512.png",
-		"icon-1024.png": "icon_512x512@2x.png",
+	// Using a slice of structs to handle multiple destinations for the same source
+	type iconMapping struct {
+		src string
+		dst string
+	}
+
+	iconsetMappings := []iconMapping{
+		{"icon-16.png", "icon_16x16.png"},
+		{"icon-32.png", "icon_16x16@2x.png"},
+		{"icon-32.png", "icon_32x32.png"},
+		{"icon-64.png", "icon_32x32@2x.png"},
+		{"icon-128.png", "icon_128x128.png"},
+		{"icon-256.png", "icon_128x128@2x.png"},
+		{"icon-256.png", "icon_256x256.png"},
+		{"icon-512.png", "icon_256x256@2x.png"},
+		{"icon-512.png", "icon_512x512.png"},
+		{"icon-1024.png", "icon_512x512@2x.png"},
 	}
 	
-	for src, dst := range iconsetFiles {
-		srcPath := filepath.Join(iconsDir, src)
-		dstPath := filepath.Join(iconsetDir, dst)
-		
+	for _, mapping := range iconsetMappings {
+		srcPath := filepath.Join(iconsDir, mapping.src)
+		dstPath := filepath.Join(iconsetDir, mapping.dst)
+
 		if _, err := os.Stat(srcPath); err == nil {
 			if data, err := os.ReadFile(srcPath); err == nil {
 				os.WriteFile(dstPath, data, 0644)
