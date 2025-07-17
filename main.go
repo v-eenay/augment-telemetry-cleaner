@@ -14,7 +14,7 @@ func main() {
 	myApp.SetIcon(assets.GetAppIcon())
 
 	mainWindow := myApp.NewWindow("Augment Telemetry Cleaner v1.1.0")
-	mainWindow.Resize(fyne.NewSize(1000, 700))
+	mainWindow.Resize(fyne.NewSize(900, 600))
 	mainWindow.CenterOnScreen()
 
 	// Set window icon

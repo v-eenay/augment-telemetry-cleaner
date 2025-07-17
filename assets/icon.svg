@@ -1,87 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Gradient for the shield -->
-    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Modern gradient background -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2E5BBA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
     </linearGradient>
-    
-    <!-- Gradient for the cleaning brush -->
-    <linearGradient id="brushGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#7ED321;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#5BA517;stop-opacity:1" />
+
+    <!-- Clean icon gradient -->
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F8F9FA;stop-opacity:1" />
     </linearGradient>
-    
-    <!-- Gradient for data particles -->
-    <radialGradient id="particleGradient" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" style="stop-color:#FF6B6B;stop-opacity:0.8" />
-      <stop offset="100%" style="stop-color:#FF4757;stop-opacity:0.3" />
-    </radialGradient>
   </defs>
-  
-  <!-- Background circle -->
-  <circle cx="128" cy="128" r="120" fill="url(#shieldGradient)" stroke="#1E3A8A" stroke-width="4"/>
-  
-  <!-- Shield shape for security/protection -->
-  <path d="M128 40 L180 60 L180 120 Q180 160 128 200 Q76 160 76 120 L76 60 Z" 
-        fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-  
-  <!-- Cleaning brush/broom -->
-  <g transform="translate(90, 80)">
-    <!-- Brush handle -->
-    <rect x="35" y="0" width="6" height="80" fill="url(#brushGradient)" rx="3"/>
-    
-    <!-- Brush head -->
-    <ellipse cx="38" cy="85" rx="15" ry="8" fill="url(#brushGradient)"/>
-    
-    <!-- Brush bristles -->
-    <g stroke="url(#brushGradient)" stroke-width="2" opacity="0.8">
-      <line x1="25" y1="88" x2="25" y2="95"/>
-      <line x1="30" y1="87" x2="30" y2="96"/>
-      <line x1="35" y1="86" x2="35" y2="97"/>
-      <line x1="40" y1="86" x2="40" y2="97"/>
-      <line x1="45" y1="87" x2="45" y2="96"/>
-      <line x1="50" y1="88" x2="50" y2="95"/>
+
+  <!-- Background circle with modern gradient -->
+  <circle cx="128" cy="128" r="120" fill="url(#bgGradient)" stroke="#2C5282" stroke-width="3"/>
+
+  <!-- Central cleaning symbol - simplified broom/brush -->
+  <g transform="translate(128, 128)">
+    <!-- Broom handle -->
+    <rect x="-3" y="-60" width="6" height="80" fill="url(#iconGradient)" rx="3"/>
+
+    <!-- Broom head -->
+    <ellipse cx="0" cy="25" rx="20" ry="10" fill="url(#iconGradient)"/>
+
+    <!-- Bristles -->
+    <g stroke="url(#iconGradient)" stroke-width="2" opacity="0.9">
+      <line x1="-15" y1="30" x2="-15" y2="40"/>
+      <line x1="-8" y1="29" x2="-8" y2="42"/>
+      <line x1="0" y1="28" x2="0" y2="43"/>
+      <line x1="8" y1="29" x2="8" y2="42"/>
+      <line x1="15" y1="30" x2="15" y2="40"/>
     </g>
   </g>
-  
-  <!-- Data particles being cleaned away -->
-  <g opacity="0.7">
-    <!-- Large particles -->
-    <circle cx="160" cy="100" r="4" fill="url(#particleGradient)"/>
-    <circle cx="170" cy="130" r="3" fill="url(#particleGradient)"/>
-    <circle cx="180" cy="110" r="2" fill="url(#particleGradient)"/>
-    
-    <!-- Medium particles -->
-    <circle cx="165" cy="145" r="2.5" fill="url(#particleGradient)"/>
-    <circle cx="185" cy="125" r="2" fill="url(#particleGradient)"/>
-    <circle cx="175" cy="155" r="1.5" fill="url(#particleGradient)"/>
-    
-    <!-- Small particles -->
-    <circle cx="190" cy="140" r="1" fill="url(#particleGradient)"/>
-    <circle cx="195" cy="115" r="1" fill="url(#particleGradient)"/>
-    <circle cx="185" cy="160" r="1" fill="url(#particleGradient)"/>
+
+  <!-- Data/telemetry symbols being cleaned -->
+  <g opacity="0.6">
+    <!-- Data dots -->
+    <circle cx="80" cy="80" r="3" fill="#FF6B6B"/>
+    <circle cx="90" cy="70" r="2" fill="#FF6B6B"/>
+    <circle cx="70" cy="90" r="2.5" fill="#FF6B6B"/>
+
+    <!-- More data dots on the right -->
+    <circle cx="180" cy="180" r="3" fill="#FF6B6B"/>
+    <circle cx="170" cy="190" r="2" fill="#FF6B6B"/>
+    <circle cx="190" cy="170" r="2.5" fill="#FF6B6B"/>
   </g>
-  
-  <!-- Motion lines to show cleaning action -->
-  <g stroke="rgba(255,255,255,0.6)" stroke-width="2" opacity="0.8">
-    <path d="M145 120 Q155 115 165 120" fill="none"/>
-    <path d="M150 135 Q160 130 170 135" fill="none"/>
-    <path d="M155 150 Q165 145 175 150" fill="none"/>
+
+  <!-- Cleaning motion lines -->
+  <g stroke="rgba(255,255,255,0.7)" stroke-width="2" opacity="0.8" fill="none">
+    <path d="M100 100 Q120 90 140 100"/>
+    <path d="M110 180 Q130 170 150 180"/>
   </g>
-  
-  <!-- VS Code inspired accent -->
-  <g transform="translate(60, 180)">
-    <rect x="0" y="0" width="8" height="8" fill="#007ACC" rx="1"/>
-    <rect x="12" y="0" width="8" height="8" fill="#007ACC" rx="1"/>
-    <rect x="24" y="0" width="8" height="8" fill="#007ACC" rx="1"/>
-  </g>
-  
-  <!-- Telemetry signal waves being disrupted -->
-  <g transform="translate(50, 50)" opacity="0.5">
-    <path d="M0 20 Q10 10 20 20 Q30 30 40 20" stroke="#FF6B6B" stroke-width="2" fill="none" stroke-dasharray="3,3"/>
-    <path d="M0 30 Q10 20 20 30 Q30 40 40 30" stroke="#FF6B6B" stroke-width="2" fill="none" stroke-dasharray="3,3"/>
-    <path d="M0 40 Q10 30 20 40 Q30 50 40 40" stroke="#FF6B6B" stroke-width="2" fill="none" stroke-dasharray="3,3"/>
-  </g>
+
+  <!-- Simple "C" for Cleaner in bottom right -->
+  <text x="200" y="220" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="rgba(255,255,255,0.8)">C</text>
 </svg>

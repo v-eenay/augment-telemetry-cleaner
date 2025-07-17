@@ -2,12 +2,15 @@ package gui
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"image/color"
 
 	"augment-telemetry-cleaner/internal/config"
 	"augment-telemetry-cleaner/internal/logger"
@@ -25,6 +28,8 @@ type MainGUI struct {
 	statusLabel    *widget.Label
 	progressBar    *widget.ProgressBar
 	logText        *widget.Entry
+	logViewer      *widget.RichText
+	logContainer   *container.Scroll
 
 	// Operation buttons
 	modifyTelemetryBtn  *widget.Button
@@ -43,6 +48,49 @@ type MainGUI struct {
 
 	// Operation state
 	isRunning          bool
+}
+
+// ModernTheme provides a custom modern theme
+type ModernTheme struct{}
+
+func (m ModernTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	switch name {
+	case theme.ColorNamePrimary:
+		return color.NRGBA{R: 74, G: 144, B: 226, A: 255} // Modern blue
+	case theme.ColorNameBackground:
+		return color.NRGBA{R: 248, G: 249, B: 250, A: 255} // Light gray
+	case theme.ColorNameButton:
+		return color.NRGBA{R: 255, G: 255, B: 255, A: 255} // White
+	case theme.ColorNameDisabledButton:
+		return color.NRGBA{R: 240, G: 240, B: 240, A: 255} // Light gray
+	case theme.ColorNameSuccess:
+		return color.NRGBA{R: 40, G: 167, B: 69, A: 255} // Green
+	case theme.ColorNameError:
+		return color.NRGBA{R: 220, G: 53, B: 69, A: 255} // Red
+	case theme.ColorNameWarning:
+		return color.NRGBA{R: 255, G: 193, B: 7, A: 255} // Yellow
+	}
+	return theme.DefaultTheme().Color(name, variant)
+}
+
+func (m ModernTheme) Font(style fyne.TextStyle) fyne.Resource {
+	return theme.DefaultTheme().Font(style)
+}
+
+func (m ModernTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
+	return theme.DefaultTheme().Icon(name)
+}
+
+func (m ModernTheme) Size(name fyne.ThemeSizeName) float32 {
+	switch name {
+	case theme.SizeNamePadding:
+		return 8
+	case theme.SizeNameInlineIcon:
+		return 16
+	case theme.SizeNameScrollBar:
+		return 12
+	}
+	return theme.DefaultTheme().Size(name)
 }
 
 // NewMainGUI creates a new instance of the main GUI
@@ -69,6 +117,9 @@ func NewMainGUI(window fyne.Window) *MainGUI {
 		isRunning:     false,
 	}
 
+	// Apply modern theme
+	fyne.CurrentApp().Settings().SetTheme(&ModernTheme{})
+
 	// Set up logger callback for GUI updates
 	gui.logger = logger // This will be updated with callback after GUI initialization
 
@@ -90,6 +141,15 @@ func (g *MainGUI) initializeComponents() {
 	g.logText.SetText("Application started. Ready to perform operations.\n")
 	g.logText.Wrapping = fyne.TextWrapWord
 	g.logText.MultiLine = true
+
+	// Real-time log viewer
+	g.logViewer = widget.NewRichText()
+	g.logViewer.Wrapping = fyne.TextWrapWord
+	g.logContainer = container.NewScroll(g.logViewer)
+	g.logContainer.SetMinSize(fyne.NewSize(400, 150))
+
+	// Set up logger callback for real-time updates
+	g.logger.SetGUICallback(g.appendToLogViewer)
 
 	// Operation buttons
 	g.modifyTelemetryBtn = widget.NewButton("Modify Telemetry IDs", g.onModifyTelemetry)
@@ -128,76 +188,70 @@ func (g *MainGUI) initializeComponents() {
 
 // BuildUI constructs and returns the main UI layout
 func (g *MainGUI) BuildUI() fyne.CanvasObject {
-	// Header section
-	headerCard := widget.NewCard("Augment Telemetry Cleaner",
-		"Clean Augment telemetry data to enable fresh VS Code sessions",
-		container.NewVBox(
-			g.statusLabel,
-			g.progressBar,
-		))
-	
-	// Operation buttons section
-	operationsCard := widget.NewCard("Operations", "",
-		container.NewVBox(
-			g.dryRunCheck,
-			g.backupCheck,
-			g.confirmCheck,
-			widget.NewSeparator(),
-			g.modifyTelemetryBtn,
-			g.cleanDatabaseBtn,
-			g.cleanWorkspaceBtn,
-			g.cleanBrowserBtn,
-			widget.NewSeparator(),
-			g.runAllBtn,
-		))
-	
-	// Log section
-	logCard := widget.NewCard("Operation Log", "", 
-		container.NewScroll(g.logText))
-	logCard.Resize(fyne.NewSize(400, 200))
-	
-	// Results section
-	resultsCard := widget.NewCard("Results", "", 
-		container.NewScroll(g.resultsText))
-	resultsCard.Resize(fyne.NewSize(400, 200))
-	
-	// Main layout
-	leftColumn := container.NewVBox(
-		headerCard,
-		operationsCard,
+	// Compact header with status and progress
+	statusContainer := container.NewVBox(
+		g.statusLabel,
+		g.progressBar,
 	)
-	
-	rightColumn := container.NewVBox(
-		logCard,
-		resultsCard,
+
+	// Compact operation controls
+	controlsContainer := container.NewVBox(
+		container.NewHBox(g.dryRunCheck, g.backupCheck, g.confirmCheck),
+		widget.NewSeparator(),
 	)
-	
-	mainContent := container.NewHSplit(leftColumn, rightColumn)
-	mainContent.SetOffset(0.4) // 40% left, 60% right
-	
+
+	// Operation buttons in a grid layout for compactness
+	buttonGrid := container.NewGridWithColumns(2,
+		g.modifyTelemetryBtn,
+		g.cleanDatabaseBtn,
+		g.cleanWorkspaceBtn,
+		g.cleanBrowserBtn,
+	)
+
+	// Main action button
+	mainActionContainer := container.NewVBox(
+		widget.NewSeparator(),
+		g.runAllBtn,
+	)
+
+	// Left panel - controls and operations
+	leftPanel := container.NewVBox(
+		statusContainer,
+		widget.NewSeparator(),
+		controlsContainer,
+		buttonGrid,
+		mainActionContainer,
+	)
+
+	// Real-time log viewer with tabs
+	logTabs := container.NewAppTabs(
+		container.NewTabItem("Live Log", g.logContainer),
+		container.NewTabItem("Results", container.NewScroll(g.resultsText)),
+	)
+
+	// Main layout - horizontal split
+	mainContent := container.NewHSplit(leftPanel, logTabs)
+	mainContent.SetOffset(0.45) // 45% left, 55% right
+
+	// Compact footer
+	footer := container.NewHBox(
+		widget.NewLabel("© 2025 Augment Telemetry Cleaner v1.1.0"),
+		widget.NewSeparator(),
+		widget.NewButton("About", g.onAbout),
+		widget.NewButton("Settings", g.onSettings),
+		widget.NewButton("Exit", g.onExit),
+	)
+
 	return container.NewBorder(
 		nil, // top
-		g.createFooter(), // bottom
+		footer, // bottom
 		nil, // left
 		nil, // right
 		mainContent, // center
 	)
 }
 
-// createFooter creates the footer with additional controls
-func (g *MainGUI) createFooter() fyne.CanvasObject {
-	aboutBtn := widget.NewButton("About", g.onAbout)
-	settingsBtn := widget.NewButton("Settings", g.onSettings)
-	exitBtn := widget.NewButton("Exit", g.onExit)
-	
-	return container.NewBorder(
-		widget.NewSeparator(),
-		nil,
-		nil,
-		container.NewHBox(aboutBtn, settingsBtn, exitBtn),
-		widget.NewLabel("© 2025 Augment Telemetry Cleaner v1.1.0 - Vinay Koirala"),
-	)
-}
+
 
 // Event handlers for operations
 func (g *MainGUI) onModifyTelemetry() {
@@ -360,4 +414,38 @@ func (g *MainGUI) setResults(results string) {
 func (g *MainGUI) showSettingsDialog() {
 	settingsDialog := NewSettingsDialog(g.window, g.configManager)
 	settingsDialog.Show()
+}
+
+// appendToLogViewer adds a log entry to the real-time log viewer
+func (g *MainGUI) appendToLogViewer(level, message string) {
+	// Create prefix based on log level
+	var prefix string
+
+	switch strings.ToUpper(level) {
+	case "ERROR":
+		prefix = "❌ ERROR: "
+	case "WARN", "WARNING":
+		prefix = "⚠️ WARNING: "
+	case "INFO":
+		prefix = "ℹ️ INFO: "
+	default:
+		prefix = "📝 "
+	}
+
+	// Format timestamp
+	timestamp := time.Now().Format("15:04:05")
+
+	// Format the log message
+	logMessage := fmt.Sprintf("[%s] %s%s", timestamp, prefix, message)
+
+	// Append to log viewer
+	currentText := g.logViewer.String()
+	if currentText != "" {
+		currentText += "\n"
+	}
+	g.logViewer.ParseMarkdown(currentText + logMessage)
+	g.logViewer.Refresh()
+
+	// Auto-scroll to bottom
+	g.logContainer.ScrollToBottom()
 }
