@@ -160,12 +160,18 @@ func (g *MainGUI) BuildUI() fyne.CanvasObject {
 		buttonsContainer,
 	)
 
-	// Right panel - logs and results
+	// Right panel - logs and results with increased heights
+	logScroll := container.NewScroll(g.logText)
+	logScroll.SetMinSize(fyne.NewSize(400, 200)) // Height for 8-10 lines
+
+	resultsScroll := container.NewScroll(g.resultsText)
+	resultsScroll.SetMinSize(fyne.NewSize(400, 160)) // Height for 6-8 lines
+
 	rightPanel := container.NewVBox(
 		widget.NewLabel("Log:"),
-		container.NewScroll(g.logText),
+		logScroll,
 		widget.NewLabel("Results:"),
-		container.NewScroll(g.resultsText),
+		resultsScroll,
 	)
 
 	// Main layout
