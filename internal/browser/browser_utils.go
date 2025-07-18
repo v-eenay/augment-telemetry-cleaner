@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -225,4 +227,85 @@ func (bc *BrowserCleaner) getCriticalFiles(profile BrowserProfile) []string {
 	}
 	
 	return files
+}
+
+// IsBrowserRunning checks if a browser process is currently running
+func IsBrowserRunning(browserType BrowserType) (bool, error) {
+	var processNames []string
+
+	switch browserType {
+	case Chrome:
+		processNames = []string{"chrome", "google chrome", "googlechrome"}
+	case Edge:
+		processNames = []string{"msedge", "microsoft edge"}
+	case Firefox:
+		processNames = []string{"firefox", "mozilla firefox"}
+	case Safari:
+		processNames = []string{"safari"}
+	}
+
+	switch runtime.GOOS {
+	case "windows":
+		return checkWindowsProcesses(processNames)
+	case "darwin":
+		return checkMacProcesses(processNames)
+	case "linux":
+		return checkLinuxProcesses(processNames)
+	default:
+		return false, fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+	}
+}
+
+// checkWindowsProcesses checks if processes are running on Windows
+func checkWindowsProcesses(processNames []string) (bool, error) {
+	cmd := exec.Command("tasklist", "/fo", "csv", "/nh")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to execute tasklist: %w", err)
+	}
+
+	outputStr := strings.ToLower(string(output))
+	for _, name := range processNames {
+		if strings.Contains(outputStr, strings.ToLower(name)) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// checkMacProcesses checks if processes are running on macOS
+func checkMacProcesses(processNames []string) (bool, error) {
+	cmd := exec.Command("ps", "-A")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to execute ps: %w", err)
+	}
+
+	outputStr := strings.ToLower(string(output))
+	for _, name := range processNames {
+		if strings.Contains(outputStr, strings.ToLower(name)) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// checkLinuxProcesses checks if processes are running on Linux
+func checkLinuxProcesses(processNames []string) (bool, error) {
+	cmd := exec.Command("ps", "-A")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to execute ps: %w", err)
+	}
+
+	outputStr := strings.ToLower(string(output))
+	for _, name := range processNames {
+		if strings.Contains(outputStr, strings.ToLower(name)) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

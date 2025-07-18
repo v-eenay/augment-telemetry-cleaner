@@ -153,6 +153,22 @@ func (g *MainGUI) runCleanBrowser() {
 		return
 	}
 
+	// Show warning about closing browsers
+	if config.RequireConfirmation {
+		message := "⚠️ IMPORTANT: Please close all browsers before proceeding.\n\n" +
+			"This operation will clean:\n" +
+			"• Augment-related cookies and domains\n" +
+			"• Local storage data containing Augment patterns\n" +
+			"• Session storage with Augment identifiers\n" +
+			"• Cache files with Augment references\n\n" +
+			"Continue with browser cleaning?"
+
+		if !g.showConfirmationDialog("Browser Cleaning Warning", message) {
+			g.logger.Info("Browser cleaning cancelled by user")
+			return
+		}
+	}
+
 	browserCleaner, err := browser.NewBrowserCleaner()
 	if err != nil {
 		g.logger.LogOperationResult("Clean Browser Data", false, err.Error())

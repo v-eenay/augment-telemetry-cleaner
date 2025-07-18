@@ -156,3 +156,10 @@ func (l *Logger) LogFileOperation(operation, path string, success bool, err erro
 		l.Error("Failed to %s file %s: %v", operation, path, err)
 	}
 }
+
+// SetGUICallback sets a callback function for GUI updates
+func (l *Logger) SetGUICallback(callback func(level, message string)) {
+	l.callback = func(level LogLevel, message string) {
+		callback(level.String(), message)
+	}
+}

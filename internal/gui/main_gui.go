@@ -2,6 +2,7 @@ package gui
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -44,6 +45,8 @@ type MainGUI struct {
 	// Operation state
 	isRunning          bool
 }
+
+
 
 // NewMainGUI creates a new instance of the main GUI
 func NewMainGUI(window fyne.Window) *MainGUI {
@@ -91,14 +94,17 @@ func (g *MainGUI) initializeComponents() {
 	g.logText.Wrapping = fyne.TextWrapWord
 	g.logText.MultiLine = true
 
-	// Operation buttons
+	// Set up logger callback for real-time updates
+	g.logger.SetGUICallback(g.appendToLog)
+
+	// Operation buttons with improved sizing
 	g.modifyTelemetryBtn = widget.NewButton("Modify Telemetry IDs", g.onModifyTelemetry)
 	g.cleanDatabaseBtn = widget.NewButton("Clean Database", g.onCleanDatabase)
 	g.cleanWorkspaceBtn = widget.NewButton("Clean Workspace", g.onCleanWorkspace)
 	g.cleanBrowserBtn = widget.NewButton("Clean Browser Data", g.onCleanBrowser)
 	g.runAllBtn = widget.NewButton("Run All Operations", g.onRunAll)
 
-	// Style the main action button
+	// Make the main action button more prominent
 	g.runAllBtn.Importance = widget.HighImportance
 
 	// Mode selection
@@ -128,76 +134,66 @@ func (g *MainGUI) initializeComponents() {
 
 // BuildUI constructs and returns the main UI layout
 func (g *MainGUI) BuildUI() fyne.CanvasObject {
-	// Header section
-	headerCard := widget.NewCard("Augment Telemetry Cleaner",
-		"Clean Augment telemetry data to enable fresh VS Code sessions",
-		container.NewVBox(
-			g.statusLabel,
-			g.progressBar,
-		))
-	
-	// Operation buttons section
-	operationsCard := widget.NewCard("Operations", "",
-		container.NewVBox(
+	// Top section - status and controls in a compact row
+	topSection := container.NewVBox(
+		g.statusLabel,
+		g.progressBar,
+		container.NewHBox(
 			g.dryRunCheck,
 			g.backupCheck,
 			g.confirmCheck,
-			widget.NewSeparator(),
-			g.modifyTelemetryBtn,
-			g.cleanDatabaseBtn,
-			g.cleanWorkspaceBtn,
-			g.cleanBrowserBtn,
-			widget.NewSeparator(),
-			g.runAllBtn,
-		))
-	
-	// Log section
-	logCard := widget.NewCard("Operation Log", "", 
-		container.NewScroll(g.logText))
-	logCard.Resize(fyne.NewSize(400, 200))
-	
-	// Results section
-	resultsCard := widget.NewCard("Results", "", 
-		container.NewScroll(g.resultsText))
-	resultsCard.Resize(fyne.NewSize(400, 200))
-	
-	// Main layout
-	leftColumn := container.NewVBox(
-		headerCard,
-		operationsCard,
+		),
 	)
-	
-	rightColumn := container.NewVBox(
-		logCard,
-		resultsCard,
+
+	// Operation buttons in a compact grid
+	buttonsGrid := container.NewGridWithColumns(2,
+		g.modifyTelemetryBtn,
+		g.cleanDatabaseBtn,
+		g.cleanWorkspaceBtn,
+		g.cleanBrowserBtn,
 	)
-	
-	mainContent := container.NewHSplit(leftColumn, rightColumn)
-	mainContent.SetOffset(0.4) // 40% left, 60% right
-	
+
+	// Main action button
+	mainActionContainer := container.NewVBox(
+		buttonsGrid,
+		g.runAllBtn,
+	)
+
+	// Log and results areas with optimized heights
+	logScroll := container.NewScroll(g.logText)
+	logScroll.SetMinSize(fyne.NewSize(800, 180))
+
+	resultsScroll := container.NewScroll(g.resultsText)
+	resultsScroll.SetMinSize(fyne.NewSize(800, 120))
+
+	// Single-panel layout for maximum space efficiency
+	mainContent := container.NewVBox(
+		topSection,
+		widget.NewSeparator(),
+		mainActionContainer,
+		widget.NewSeparator(),
+		widget.NewLabel("Log:"),
+		logScroll,
+		widget.NewLabel("Results:"),
+		resultsScroll,
+	)
+
+	// Simplified footer with only essential elements
+	footer := container.NewHBox(
+		widget.NewLabel("© 2025 Augment Telemetry Cleaner v1.1.0 - Vinay Koirala"),
+		widget.NewButton("Exit", g.onExit),
+	)
+
 	return container.NewBorder(
-		nil, // top
-		g.createFooter(), // bottom
-		nil, // left
-		nil, // right
-		mainContent, // center
+		nil,
+		footer,
+		nil,
+		nil,
+		mainContent,
 	)
 }
 
-// createFooter creates the footer with additional controls
-func (g *MainGUI) createFooter() fyne.CanvasObject {
-	aboutBtn := widget.NewButton("About", g.onAbout)
-	settingsBtn := widget.NewButton("Settings", g.onSettings)
-	exitBtn := widget.NewButton("Exit", g.onExit)
-	
-	return container.NewBorder(
-		widget.NewSeparator(),
-		nil,
-		nil,
-		container.NewHBox(aboutBtn, settingsBtn, exitBtn),
-		widget.NewLabel("© 2025 Augment Telemetry Cleaner v1.1.0 - Vinay Koirala"),
-	)
-}
+
 
 // Event handlers for operations
 func (g *MainGUI) onModifyTelemetry() {
@@ -268,32 +264,7 @@ func (g *MainGUI) onRunAll() {
 	go g.runAllOperations()
 }
 
-func (g *MainGUI) onAbout() {
-	aboutText := `Augment Telemetry Cleaner v2.0.0
 
-A desktop application for cleaning Augment telemetry data from VS Code, enabling fresh development sessions.
-
-Features:
-• Modify telemetry IDs
-• Clean database records
-• Clean workspace storage
-• Automatic backups
-• Dry-run mode for safety
-• Comprehensive file scanning
-
-Developer: Vinay Koirala
-Email: koiralavinay@gmail.com
-GitHub: github.com/v-eenay
-LinkedIn: linkedin.com/in/veenay
-
-© 2025 Vinay Koirala`
-
-	dialog.ShowInformation("About", aboutText, g.window)
-}
-
-func (g *MainGUI) onSettings() {
-	g.showSettingsDialog()
-}
 
 func (g *MainGUI) onExit() {
 	if g.logger != nil {
@@ -357,7 +328,21 @@ func (g *MainGUI) setResults(results string) {
 	g.resultsText.SetText(results)
 }
 
-func (g *MainGUI) showSettingsDialog() {
-	settingsDialog := NewSettingsDialog(g.window, g.configManager)
-	settingsDialog.Show()
+
+
+// appendToLog adds a log entry to the log display
+func (g *MainGUI) appendToLog(level, message string) {
+	// Format timestamp
+	timestamp := time.Now().Format("15:04:05")
+
+	// Format the log message
+	logMessage := fmt.Sprintf("[%s] %s: %s\n", timestamp, strings.ToUpper(level), message)
+
+	// Append to log text
+	currentText := g.logText.Text
+	g.logText.SetText(currentText + logMessage)
+
+	// Auto-scroll to bottom by moving cursor to end
+	g.logText.CursorRow = len(strings.Split(g.logText.Text, "\n")) - 1
+	g.logText.CursorColumn = 0
 }
