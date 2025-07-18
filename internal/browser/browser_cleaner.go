@@ -178,41 +178,79 @@ func (bc *BrowserCleaner) cleanChromiumCookies(cookiesDBPath string) (int64, err
 		return 0, fmt.Errorf("failed to open cookies database: %w", err)
 	}
 	defer db.Close()
-	
-	// Delete cookies with Augment-related domains
-	query := `DELETE FROM cookies WHERE host_key LIKE '%augment%' OR name LIKE '%augment%'`
-	result, err := db.Exec(query)
-	if err != nil {
-		return 0, fmt.Errorf("failed to delete cookies: %w", err)
+
+	// Enhanced patterns for Augment-related domains and cookie names
+	augmentPatterns := []string{
+		"%augment%",
+		"%augmentcode%",
+		"%augment-code%",
+		"%vscode-augment%",
+		"%augment.code%",
+		"%augment_telemetry%",
+		"%augment_session%",
+		"%augment_user%",
 	}
-	
-	deleted, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get affected rows: %w", err)
+
+	var totalDeleted int64
+
+	// Delete cookies with Augment-related domains or names
+	for _, pattern := range augmentPatterns {
+		query := `DELETE FROM cookies WHERE host_key LIKE ? OR name LIKE ? OR value LIKE ?`
+		result, err := db.Exec(query, pattern, pattern, pattern)
+		if err != nil {
+			return totalDeleted, fmt.Errorf("failed to delete cookies with pattern %s: %w", pattern, err)
+		}
+
+		deleted, err := result.RowsAffected()
+		if err != nil {
+			return totalDeleted, fmt.Errorf("failed to get affected rows for pattern %s: %w", pattern, err)
+		}
+
+		totalDeleted += deleted
 	}
-	
-	return deleted, nil
+
+	return totalDeleted, nil
 }
 
 // cleanChromiumLocalStorage cleans Augment-related local storage
 func (bc *BrowserCleaner) cleanChromiumLocalStorage(storageDir string) (int64, error) {
 	var deleted int64
-	
+
+	// Enhanced patterns for Augment-related storage files
+	augmentPatterns := []string{
+		"augment",
+		"augmentcode",
+		"augment-code",
+		"vscode-augment",
+		"augment.code",
+		"augment_telemetry",
+		"augment_session",
+		"augment_user",
+	}
+
 	// LevelDB files containing Augment data
 	err := filepath.Walk(storageDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
-		if !info.IsDir() && strings.Contains(strings.ToLower(info.Name()), "augment") {
-			if err := os.Remove(path); err == nil {
-				deleted++
+
+		if !info.IsDir() {
+			fileName := strings.ToLower(info.Name())
+
+			// Check if file contains any Augment-related patterns
+			for _, pattern := range augmentPatterns {
+				if strings.Contains(fileName, pattern) {
+					if err := os.Remove(path); err == nil {
+						deleted++
+					}
+					break
+				}
 			}
 		}
-		
+
 		return nil
 	})
-	
+
 	return deleted, err
 }
 

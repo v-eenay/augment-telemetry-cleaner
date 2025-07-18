@@ -3,6 +3,7 @@ package browser
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -370,15 +371,72 @@ func (bd *BrowserDetector) IsProcessRunning(browserType BrowserType) (bool, erro
 
 // checkProcesses checks if any of the given process names are running
 func (bd *BrowserDetector) checkProcesses(processNames []string) (bool, error) {
-	// This is a simplified implementation
-	// In a real implementation, you would use platform-specific APIs
-	// to check for running processes
+	if len(processNames) == 0 {
+		return false, nil
+	}
 
-	// For now, we'll assume browsers might be running and warn the user
-	// A full implementation would use:
-	// - Windows: tasklist or WMI
-	// - macOS: ps or Activity Monitor APIs
-	// - Linux: ps or /proc filesystem
+	switch runtime.GOOS {
+	case "windows":
+		return bd.checkWindowsProcesses(processNames)
+	case "darwin":
+		return bd.checkMacProcesses(processNames)
+	case "linux":
+		return bd.checkLinuxProcesses(processNames)
+	default:
+		return false, fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+	}
+}
 
-	return false, nil // Simplified: assume not running
+// checkWindowsProcesses checks if processes are running on Windows
+func (bd *BrowserDetector) checkWindowsProcesses(processNames []string) (bool, error) {
+	cmd := exec.Command("tasklist", "/fo", "csv", "/nh")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to execute tasklist: %w", err)
+	}
+
+	outputStr := strings.ToLower(string(output))
+	for _, name := range processNames {
+		if strings.Contains(outputStr, strings.ToLower(name)) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// checkMacProcesses checks if processes are running on macOS
+func (bd *BrowserDetector) checkMacProcesses(processNames []string) (bool, error) {
+	cmd := exec.Command("ps", "-A")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to execute ps: %w", err)
+	}
+
+	outputStr := strings.ToLower(string(output))
+	for _, name := range processNames {
+		if strings.Contains(outputStr, strings.ToLower(name)) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// checkLinuxProcesses checks if processes are running on Linux
+func (bd *BrowserDetector) checkLinuxProcesses(processNames []string) (bool, error) {
+	cmd := exec.Command("ps", "-A")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to execute ps: %w", err)
+	}
+
+	outputStr := strings.ToLower(string(output))
+	for _, name := range processNames {
+		if strings.Contains(outputStr, strings.ToLower(name)) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
