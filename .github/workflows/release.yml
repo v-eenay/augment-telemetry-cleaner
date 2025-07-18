@@ -74,10 +74,6 @@ jobs:
       - name: Create dist directory
         run: mkdir -p dist
 
-      - name: Generate platform-specific icons
-        run: |
-          go run scripts/generate-icons.go
-
       - name: Build binary (Linux)
         if: matrix.os == 'ubuntu-latest'
         env:

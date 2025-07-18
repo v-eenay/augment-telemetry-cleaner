@@ -1,8 +1,7 @@
 [Details]
-Icon = "assets/icon.svg"
 Name = "Augment Telemetry Cleaner"
 ID = "com.vinaykoirala.augmenttelemetrycleaner"
-Version = "1.1.0"
+Version = "1.2.0"
 
 [Information]
 Author = "Vinay Koirala"
