@@ -97,12 +97,15 @@ func (g *MainGUI) initializeComponents() {
 	// Set up logger callback for real-time updates
 	g.logger.SetGUICallback(g.appendToLog)
 
-	// Operation buttons
+	// Operation buttons with improved sizing
 	g.modifyTelemetryBtn = widget.NewButton("Modify Telemetry IDs", g.onModifyTelemetry)
 	g.cleanDatabaseBtn = widget.NewButton("Clean Database", g.onCleanDatabase)
 	g.cleanWorkspaceBtn = widget.NewButton("Clean Workspace", g.onCleanWorkspace)
 	g.cleanBrowserBtn = widget.NewButton("Clean Browser Data", g.onCleanBrowser)
 	g.runAllBtn = widget.NewButton("Run All Operations", g.onRunAll)
+
+	// Make the main action button more prominent
+	g.runAllBtn.Importance = widget.HighImportance
 
 	// Mode selection
 	g.dryRunCheck = widget.NewCheck("Dry Run Mode (Preview only)", g.onDryRunToggle)
@@ -131,58 +134,53 @@ func (g *MainGUI) initializeComponents() {
 
 // BuildUI constructs and returns the main UI layout
 func (g *MainGUI) BuildUI() fyne.CanvasObject {
-	// Status and progress
-	statusContainer := container.NewVBox(
+	// Top section - status and controls in a compact row
+	topSection := container.NewVBox(
 		g.statusLabel,
 		g.progressBar,
+		container.NewHBox(
+			g.dryRunCheck,
+			g.backupCheck,
+			g.confirmCheck,
+		),
 	)
 
-	// Controls
-	controlsContainer := container.NewHBox(
-		g.dryRunCheck,
-		g.backupCheck,
-		g.confirmCheck,
-	)
-
-	// Operation buttons
-	buttonsContainer := container.NewVBox(
+	// Operation buttons in a compact grid
+	buttonsGrid := container.NewGridWithColumns(2,
 		g.modifyTelemetryBtn,
 		g.cleanDatabaseBtn,
 		g.cleanWorkspaceBtn,
 		g.cleanBrowserBtn,
+	)
+
+	// Main action button
+	mainActionContainer := container.NewVBox(
+		buttonsGrid,
 		g.runAllBtn,
 	)
 
-	// Left panel
-	leftPanel := container.NewVBox(
-		statusContainer,
-		controlsContainer,
-		buttonsContainer,
-	)
-
-	// Right panel - logs and results with increased heights
+	// Log and results areas with optimized heights
 	logScroll := container.NewScroll(g.logText)
-	logScroll.SetMinSize(fyne.NewSize(400, 200)) // Height for 8-10 lines
+	logScroll.SetMinSize(fyne.NewSize(800, 180))
 
 	resultsScroll := container.NewScroll(g.resultsText)
-	resultsScroll.SetMinSize(fyne.NewSize(400, 160)) // Height for 6-8 lines
+	resultsScroll.SetMinSize(fyne.NewSize(800, 120))
 
-	rightPanel := container.NewVBox(
+	// Single-panel layout for maximum space efficiency
+	mainContent := container.NewVBox(
+		topSection,
+		widget.NewSeparator(),
+		mainActionContainer,
+		widget.NewSeparator(),
 		widget.NewLabel("Log:"),
 		logScroll,
 		widget.NewLabel("Results:"),
 		resultsScroll,
 	)
 
-	// Main layout
-	mainContent := container.NewHSplit(leftPanel, rightPanel)
-	mainContent.SetOffset(0.4)
-
-	// Footer
+	// Simplified footer with only essential elements
 	footer := container.NewHBox(
-		widget.NewLabel("Augment Telemetry Cleaner v1.1.0"),
-		widget.NewButton("About", g.onAbout),
-		widget.NewButton("Settings", g.onSettings),
+		widget.NewLabel("© 2025 Augment Telemetry Cleaner v1.1.0 - Vinay Koirala"),
 		widget.NewButton("Exit", g.onExit),
 	)
 
@@ -266,32 +264,7 @@ func (g *MainGUI) onRunAll() {
 	go g.runAllOperations()
 }
 
-func (g *MainGUI) onAbout() {
-	aboutText := `Augment Telemetry Cleaner v2.0.0
 
-A desktop application for cleaning Augment telemetry data from VS Code, enabling fresh development sessions.
-
-Features:
-• Modify telemetry IDs
-• Clean database records
-• Clean workspace storage
-• Automatic backups
-• Dry-run mode for safety
-• Comprehensive file scanning
-
-Developer: Vinay Koirala
-Email: koiralavinay@gmail.com
-GitHub: github.com/v-eenay
-LinkedIn: linkedin.com/in/veenay
-
-© 2025 Vinay Koirala`
-
-	dialog.ShowInformation("About", aboutText, g.window)
-}
-
-func (g *MainGUI) onSettings() {
-	g.showSettingsDialog()
-}
 
 func (g *MainGUI) onExit() {
 	if g.logger != nil {
@@ -355,10 +328,7 @@ func (g *MainGUI) setResults(results string) {
 	g.resultsText.SetText(results)
 }
 
-func (g *MainGUI) showSettingsDialog() {
-	settingsDialog := NewSettingsDialog(g.window, g.configManager)
-	settingsDialog.Show()
-}
+
 
 // appendToLog adds a log entry to the log display
 func (g *MainGUI) appendToLog(level, message string) {
