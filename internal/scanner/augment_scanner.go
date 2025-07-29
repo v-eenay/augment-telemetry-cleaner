@@ -13,13 +13,14 @@ import (
 
 // ScanResult represents the result of scanning for Augment-related files
 type ScanResult struct {
-	VSCodeFiles      []FileInfo `json:"vscode_files"`
-	AugmentFiles     []FileInfo `json:"augment_files"`
-	ConfigFiles      []FileInfo `json:"config_files"`
-	LogFiles         []FileInfo `json:"log_files"`
-	TotalFiles       int        `json:"total_files"`
-	TotalSize        int64      `json:"total_size_bytes"`
-	ScanDuration     time.Duration `json:"scan_duration"`
+	VSCodeFiles         []FileInfo             `json:"vscode_files"`
+	AugmentFiles        []FileInfo             `json:"augment_files"`
+	ConfigFiles         []FileInfo             `json:"config_files"`
+	LogFiles            []FileInfo             `json:"log_files"`
+	ExtensionScanResult *ExtensionScanResult   `json:"extension_scan_result,omitempty"`
+	TotalFiles          int                    `json:"total_files"`
+	TotalSize           int64                  `json:"total_size_bytes"`
+	ScanDuration        time.Duration          `json:"scan_duration"`
 }
 
 // FileInfo represents information about a discovered file
@@ -97,6 +98,12 @@ func (s *AugmentScanner) ScanSystem() (*ScanResult, error) {
 		return nil, fmt.Errorf("failed to scan VS Code directories: %w", err)
 	}
 
+	// Scan VS Code extensions for telemetry
+	if err := s.scanExtensions(result); err != nil {
+		// Log error but continue - extension scanning is not critical
+		fmt.Printf("Warning: Extension scanning failed: %v\n", err)
+	}
+
 	// Scan common application directories
 	if err := s.scanCommonDirectories(result); err != nil {
 		return nil, fmt.Errorf("failed to scan common directories: %w", err)
@@ -110,6 +117,11 @@ func (s *AugmentScanner) ScanSystem() (*ScanResult, error) {
 		for _, file := range files {
 			result.TotalSize += file.Size
 		}
+	}
+
+	// Add extension scan results to total size if available
+	if result.ExtensionScanResult != nil {
+		result.TotalSize += result.ExtensionScanResult.TotalStorageSize
 	}
 
 	result.ScanDuration = time.Since(startTime)
@@ -309,4 +321,62 @@ func (s *AugmentScanner) generateDescription(filePath string, confidence float64
 	default:
 		return "May contain Augment references"
 	}
+}
+// scanExtensions scans VS Code extensions for telemetry capabilities
+func (s *AugmentScanner) scanExtensions(result *ScanResult) error {
+	// Create extension scanner
+	extensionScanner := NewExtensionScanner()
+	
+	// Scan all extensions
+	extensionResult, err := extensionScanner.ScanExtensions()
+	if err != nil {
+		return fmt.Errorf("failed to scan extensions: %w", err)
+	}
+
+	// Perform detailed analysis on extensions with telemetry
+	analyzer := NewExtensionAnalyzer()
+	
+	for i := range extensionResult.Extensions {
+		extension := &extensionResult.Extensions[i]
+		
+		// Analyze source code for telemetry patterns
+		patterns, err := analyzer.AnalyzeExtensionSourceCode(extension)
+		if err != nil {
+			// Continue with other extensions if one fails
+			continue
+		}
+
+		// Analyze activation function specifically
+		activationPatterns, err := analyzer.AnalyzeActivationFunction(extension)
+		if err == nil {
+			patterns = append(patterns, activationPatterns...)
+		}
+
+		// Analyze command handlers
+		commandPatterns, err := analyzer.AnalyzeCommandHandlers(extension)
+		if err == nil {
+			patterns = append(patterns, commandPatterns...)
+		}
+
+		// Update extension telemetry information based on detailed analysis
+		if len(patterns) > 0 {
+			// Store patterns in extension for later use
+			// This could be expanded to include pattern details in the extension info
+			extension.HasTelemetry = true
+			
+			// Update risk level based on patterns found
+			maxRisk := extension.TelemetryRisk
+			for _, pattern := range patterns {
+				if pattern.Risk > maxRisk {
+					maxRisk = pattern.Risk
+				}
+			}
+			extension.TelemetryRisk = maxRisk
+		}
+	}
+
+	// Store extension scan result
+	result.ExtensionScanResult = extensionResult
+	
+	return nil
 }
