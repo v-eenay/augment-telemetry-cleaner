@@ -15,15 +15,7 @@ import (
 
 // cleanSafariBrowser cleans Safari browser data (macOS only)
 func (bc *BrowserCleaner) cleanSafariBrowser(profile BrowserProfile, result *BrowserCleanResult) {
-	// Clean cookies
-	cookiesFile := filepath.Join(profile.ProfilePath, "Cookies", "Cookies.binarycookies")
-	if _, err := os.Stat(cookiesFile); err == nil {
-		// Safari uses binary cookies format, which is complex to parse
-		// For now, we'll skip direct cookie cleaning and recommend manual clearing
-		result.Errors = append(result.Errors, "Safari cookie cleaning requires manual intervention")
-	}
-	
-	// Clean local storage
+	// Clean local storage (this is the most accessible part)
 	localStorageDir := filepath.Join(profile.ProfilePath, "LocalStorage")
 	if _, err := os.Stat(localStorageDir); err == nil {
 		deleted, err := bc.cleanSafariStorage(localStorageDir)
@@ -34,26 +26,66 @@ func (bc *BrowserCleaner) cleanSafariBrowser(profile BrowserProfile, result *Bro
 		}
 	}
 	
-	// Clean cache
-	cacheDir := filepath.Join(profile.ProfilePath, "Cache.db")
-	if _, err := os.Stat(cacheDir); err == nil {
-		// Safari cache is also in a proprietary format
-		result.Errors = append(result.Errors, "Safari cache cleaning requires manual intervention")
+	// Clean WebKit storage
+	webkitStorageDir := filepath.Join(profile.ProfilePath, "WebKit", "LocalStorage")
+	if _, err := os.Stat(webkitStorageDir); err == nil {
+		deleted, err := bc.cleanSafariStorage(webkitStorageDir)
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("Failed to clean WebKit storage: %v", err))
+		} else {
+			result.StorageDeleted += deleted
+		}
 	}
+	
+	// Clean databases directory
+	databasesDir := filepath.Join(profile.ProfilePath, "Databases")
+	if _, err := os.Stat(databasesDir); err == nil {
+		deleted, err := bc.cleanSafariDatabases(databasesDir)
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("Failed to clean databases: %v", err))
+		} else {
+			result.StorageDeleted += deleted
+		}
+	}
+	
+	// Note about manual cleaning for cookies and cache
+	result.Errors = append(result.Errors, "Note: Safari cookies and cache may require manual clearing through Safari's preferences")
 }
 
 // cleanSafariStorage cleans Augment-related storage from Safari
 func (bc *BrowserCleaner) cleanSafariStorage(storageDir string) (int64, error) {
 	var deleted int64
 	
+	// Enhanced patterns for Safari storage
+	augmentPatterns := []string{
+		"augment",
+		"augmentcode",
+		"augment-code",
+		"vscode-augment",
+		"augment.code",
+		"augmentai",
+		"augment-ai",
+	}
+	
 	err := filepath.Walk(storageDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return nil // Skip files we can't access
 		}
 		
-		if !info.IsDir() && strings.Contains(strings.ToLower(info.Name()), "augment") {
-			if err := os.Remove(path); err == nil {
-				deleted++
+		if !info.IsDir() {
+			fileName := strings.ToLower(info.Name())
+			for _, pattern := range augmentPatterns {
+				if strings.Contains(fileName, pattern) {
+					// Try multiple times to remove the file
+					for i := 0; i < 3; i++ {
+						if err := os.Remove(path); err == nil {
+							deleted++
+							break
+						}
+						time.Sleep(100 * time.Millisecond)
+					}
+					break
+				}
 			}
 		}
 		
@@ -308,4 +340,60 @@ func checkLinuxProcesses(processNames []string) (bool, error) {
 	}
 
 	return false, nil
+}
+// cleanSafariDatabases cleans Augment-related databases from Safari
+func (bc *BrowserCleaner) cleanSafariDatabases(databasesDir string) (int64, error) {
+	var deleted int64
+	
+	// Enhanced patterns for Safari databases
+	augmentPatterns := []string{
+		"augment",
+		"augmentcode",
+		"augment-code",
+		"vscode-augment",
+		"augment.code",
+		"augmentai",
+		"augment-ai",
+	}
+	
+	err := filepath.Walk(databasesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip files we can't access
+		}
+		
+		if info.IsDir() {
+			dirName := strings.ToLower(info.Name())
+			for _, pattern := range augmentPatterns {
+				if strings.Contains(dirName, pattern) {
+					// Try multiple times to remove the directory
+					for i := 0; i < 3; i++ {
+						if err := os.RemoveAll(path); err == nil {
+							deleted++
+							break
+						}
+						time.Sleep(100 * time.Millisecond)
+					}
+					return filepath.SkipDir
+				}
+			}
+		} else {
+			fileName := strings.ToLower(info.Name())
+			for _, pattern := range augmentPatterns {
+				if strings.Contains(fileName, pattern) {
+					for i := 0; i < 3; i++ {
+						if err := os.Remove(path); err == nil {
+							deleted++
+							break
+						}
+						time.Sleep(100 * time.Millisecond)
+					}
+					break
+				}
+			}
+		}
+		
+		return nil
+	})
+	
+	return deleted, err
 }

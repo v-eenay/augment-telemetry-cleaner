@@ -336,33 +336,33 @@ func (bd *BrowserDetector) IsProcessRunning(browserType BrowserType) (bool, erro
 	case Chrome:
 		switch runtime.GOOS {
 		case "windows":
-			processNames = []string{"chrome.exe"}
+			processNames = []string{"chrome.exe", "chrome_proxy.exe", "chrome_crashpad_handler.exe"}
 		case "darwin":
-			processNames = []string{"Google Chrome"}
+			processNames = []string{"Google Chrome", "Google Chrome Helper", "chrome"}
 		case "linux":
-			processNames = []string{"chrome", "chromium", "google-chrome"}
+			processNames = []string{"chrome", "chromium", "google-chrome", "chrome-sandbox"}
 		}
 	case Edge:
 		switch runtime.GOOS {
 		case "windows":
-			processNames = []string{"msedge.exe"}
+			processNames = []string{"msedge.exe", "msedge_proxy.exe", "msedgewebview2.exe"}
 		case "darwin":
-			processNames = []string{"Microsoft Edge"}
+			processNames = []string{"Microsoft Edge", "Microsoft Edge Helper"}
 		case "linux":
-			processNames = []string{"microsoft-edge"}
+			processNames = []string{"microsoft-edge", "msedge"}
 		}
 	case Firefox:
 		switch runtime.GOOS {
 		case "windows":
-			processNames = []string{"firefox.exe"}
+			processNames = []string{"firefox.exe", "plugin-container.exe", "crashreporter.exe"}
 		case "darwin":
-			processNames = []string{"Firefox"}
+			processNames = []string{"Firefox", "firefox", "plugin-container"}
 		case "linux":
-			processNames = []string{"firefox"}
+			processNames = []string{"firefox", "firefox-bin", "plugin-container"}
 		}
 	case Safari:
 		if runtime.GOOS == "darwin" {
-			processNames = []string{"Safari"}
+			processNames = []string{"Safari", "com.apple.WebKit.WebContent", "SafariForWebKitDevelopment"}
 		}
 	}
 
