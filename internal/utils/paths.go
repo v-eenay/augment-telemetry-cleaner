@@ -232,3 +232,8 @@ func GetExtensionWorkspaceStoragePath(workspaceHash, extensionId string) (string
 	
 	return filepath.Join(workspaceStoragePath, workspaceHash, extensionId), nil
 }
+
+// GetOS returns the current operating system
+func GetOS() string {
+	return runtime.GOOS
+}
