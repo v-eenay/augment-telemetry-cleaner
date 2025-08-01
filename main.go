@@ -9,7 +9,7 @@ import (
 func main() {
 	myApp := app.NewWithID("com.vinaykoirala.augmenttelemetrycleaner")
 
-	mainWindow := myApp.NewWindow("Augment Telemetry Cleaner v1.1.0")
+	mainWindow := myApp.NewWindow("Augment Telemetry Cleaner v2.0.0")
 	mainWindow.Resize(fyne.NewSize(800, 700))
 	mainWindow.CenterOnScreen()
 

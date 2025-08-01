@@ -180,7 +180,7 @@ func (g *MainGUI) BuildUI() fyne.CanvasObject {
 
 	// Simplified footer with only essential elements
 	footer := container.NewHBox(
-		widget.NewLabel("© 2025 Augment Telemetry Cleaner v1.1.0 - Vinay Koirala"),
+		widget.NewLabel("© 2025 Augment Telemetry Cleaner v2.0.0 - Vinay Koirala"),
 		widget.NewButton("Exit", g.onExit),
 	)
 
