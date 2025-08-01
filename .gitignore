@@ -166,7 +166,13 @@ log/
 # Backup files (created by the application)
 *.bak.*
 *_backup_*
-backup_*
+backup_*.json
+backup_*.db
+backup_*.sqlite
+backup_*.log
+backup_*.txt
+backup_*.zip
+backup_*.tar.gz
 backups/
 
 # Temporary directories and files

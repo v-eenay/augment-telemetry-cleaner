@@ -130,4 +130,6 @@ Special thanks to the community for feedback and testing that made this major re
 
 **⚠️ Important**: This is a major release with significant changes. Please test in a safe environment and ensure you have backups before using on production systems.
 
+**⚠️ User Warning**: Note: This application may log you out of other browser extensions and accounts, but Augment will continue to work properly even with a new email account after running this tool.
+
 **🎉 Enjoy the enhanced Augment Telemetry Cleaner v2.0.0!**
