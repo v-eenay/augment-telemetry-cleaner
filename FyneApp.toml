@@ -2,6 +2,7 @@
 Name = "Augment Telemetry Cleaner"
 ID = "com.vinaykoirala.augmenttelemetrycleaner"
 Version = "2.0.0"
+Icon = "assets/icon.png"
 
 [Information]
 Author = "Vinay Koirala"
