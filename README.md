@@ -1,6 +1,6 @@
 # Augment Telemetry Cleaner
 
-A modern desktop application for cleaning Augment telemetry data from VS Code, enabling fresh development sessions.
+A comprehensive tool for cleaning Augment telemetry data from VS Code, available in both GUI and CLI versions for different use cases.
 
 ## 🚀 Features
 
@@ -24,6 +24,23 @@ A modern desktop application for cleaning Augment telemetry data from VS Code, e
 - 📈 **Progress Tracking**: Real-time progress indicators for long-running operations
 - 🎯 **Cross-Platform**: Works on Windows, macOS, and Linux
 
+## 🖥️ Two Versions Available
+
+### GUI Version (Desktop Application)
+- **Interactive Interface**: Point-and-click operation with real-time feedback
+- **Visual Progress**: Progress bars and status indicators
+- **Settings Management**: Configurable preferences and safety settings
+- **Best for**: Interactive use, one-time operations, users who prefer graphical interfaces
+
+### CLI Version (Command-Line Tool)
+- **Automation Ready**: Perfect for scripts and CI/CD pipelines
+- **Batch Operations**: Run multiple operations in sequence
+- **JSON Output**: Machine-readable output for integration
+- **Dry-Run Support**: Preview operations without making changes
+- **Best for**: Automation, scripting, headless environments, power users
+
+See [CLI-README.md](CLI-README.md) for detailed CLI documentation.
+
 ## 📋 Requirements
 
 - Go 1.21 or higher
@@ -44,13 +61,44 @@ A modern desktop application for cleaning Augment telemetry data from VS Code, e
    ```
 
 2. Build the application:
+
+   **GUI Version (Desktop Application):**
    ```bash
+   # Windows
    go build -o augment-cleaner.exe .
+
+   # Linux/macOS
+   go build -o augment-cleaner .
+   ```
+
+   **CLI Version (Command-Line Tool):**
+   ```bash
+   # Windows
+   go build -o augment-cleaner-cli.exe ./cmd/cli/
+
+   # Linux/macOS
+   go build -o augment-cleaner-cli ./cmd/cli/
+   ```
+
+   **Build All Versions (Cross-Platform):**
+   ```bash
+   # Use the provided build scripts
+   ./build-cli.sh        # Linux/macOS
+   build-cli.bat         # Windows
    ```
 
 3. Run the application:
+
+   **GUI Version:**
    ```bash
-   ./augment-cleaner.exe
+   ./augment-cleaner.exe    # Windows
+   ./augment-cleaner        # Linux/macOS
+   ```
+
+   **CLI Version:**
+   ```bash
+   ./augment-cleaner-cli.exe --help    # Windows
+   ./augment-cleaner-cli --help        # Linux/macOS
    ```
 
 ## 🎯 Usage
@@ -59,7 +107,7 @@ A modern desktop application for cleaning Augment telemetry data from VS Code, e
 1. **Close VS Code completely** - Ensure all VS Code processes are terminated
 2. **Exit Augment plugin** - Make sure the Augment extension is not running
 
-### Using the Application
+### Using the GUI Application
 1. Launch the Augment Telemetry Cleaner
 2. Configure your preferences in the Settings dialog (optional)
 3. Choose your operation mode:
@@ -68,6 +116,23 @@ A modern desktop application for cleaning Augment telemetry data from VS Code, e
 4. Select individual operations or use "Run All Operations"
 5. Review the results and backup information
 6. Restart VS Code when ready
+
+### Using the CLI Application
+```bash
+# Preview all operations (safe)
+./augment-cleaner-cli --operation run-all --dry-run
+
+# Clean database with verbose output
+./augment-cleaner-cli --operation clean-database --verbose
+
+# Run all operations without confirmation (automation)
+./augment-cleaner-cli --operation run-all --no-confirm
+
+# Get help
+./augment-cleaner-cli --help
+```
+
+For detailed CLI documentation, see [CLI-README.md](CLI-README.md).
 
 ### Operation Types
 - **Modify Telemetry IDs**: Changes machine and device IDs in VS Code's configuration
