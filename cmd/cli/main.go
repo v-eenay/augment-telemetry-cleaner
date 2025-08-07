@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -20,7 +19,6 @@ import (
 // CLI represents the command-line interface
 type CLI struct {
 	configManager *config.ConfigManager
-	logger        *logger.Logger
 	fileLogger    *log.Logger
 	logLevel      int
 	config        *CLIConfig
@@ -190,7 +188,6 @@ func (c *CLI) initialize() error {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
 	c.fileLogger = fileLogger
-	c.logger = nil // Keep this nil to avoid stdout conflicts
 
 	// Store log level for our simple logger
 	c.logLevel = c.parseLogLevel(c.config.LogLevel)
@@ -198,59 +195,54 @@ func (c *CLI) initialize() error {
 	return nil
 }
 
-// onLogMessage handles log messages
-func (c *CLI) onLogMessage(level logger.LogLevel, message string) {
-	if c.config.Verbose || level >= 2 { // WARN level
-		fmt.Printf("[%s] %s\n", level.String(), message)
-	}
-}
-
-// Helper methods for safe logging
+// Logging helper methods
 func (c *CLI) logOperation(operation string) {
-	if c.fileLogger != nil {
-		c.fileLogger.Printf("[INFO] === Starting operation: %s ===", operation)
-	}
+	c.log("INFO", "=== Starting operation: %s ===", operation)
 }
 
 func (c *CLI) logInfo(format string, args ...interface{}) {
-	if c.fileLogger != nil && c.logLevel <= 1 { // INFO level
-		c.fileLogger.Printf("[INFO] "+format, args...)
-	}
+	c.log("INFO", format, args...)
 }
 
 func (c *CLI) logError(format string, args ...interface{}) {
-	if c.fileLogger != nil && c.logLevel <= 3 { // ERROR level
-		c.fileLogger.Printf("[ERROR] "+format, args...)
-	}
+	c.log("ERROR", format, args...)
 }
 
 func (c *CLI) logOperationResult(operation string, success bool, details string) {
-	if c.fileLogger != nil {
-		if success {
-			c.fileLogger.Printf("[INFO] === Operation completed successfully: %s ===", operation)
-			if details != "" {
-				c.fileLogger.Printf("[INFO] Details: %s", details)
-			}
-		} else {
-			c.fileLogger.Printf("[ERROR] === Operation failed: %s ===", operation)
-			if details != "" {
-				c.fileLogger.Printf("[ERROR] Error details: %s", details)
-			}
+	if success {
+		c.log("INFO", "=== Operation completed successfully: %s ===", operation)
+		if details != "" {
+			c.log("INFO", "Details: %s", details)
+		}
+	} else {
+		c.log("ERROR", "=== Operation failed: %s ===", operation)
+		if details != "" {
+			c.log("ERROR", "Error details: %s", details)
 		}
 	}
 }
 
 func (c *CLI) logBackupCreated(originalPath, backupPath string) {
-	if c.fileLogger != nil {
-		c.fileLogger.Printf("[INFO] Backup created: %s -> %s", originalPath, backupPath)
+	c.log("INFO", "Backup created: %s -> %s", originalPath, backupPath)
+}
+
+// log is the centralized logging method
+func (c *CLI) log(level, format string, args ...interface{}) {
+	if c.fileLogger == nil {
+		return
 	}
+
+	// Check log level
+	levelNum := c.parseLogLevel(level)
+	if levelNum < c.logLevel {
+		return
+	}
+
+	c.fileLogger.Printf("[%s] "+format, append([]interface{}{level}, args...)...)
 }
 
 // run executes the specified operation
 func (c *CLI) run() error {
-	// Note: fileLogger doesn't need explicit closing as it's handled by the OS
-	// when the program exits, but we could add it if needed
-
 	c.printHeader()
 
 	switch c.config.Operation {
@@ -514,61 +506,68 @@ func (c *CLI) runAllOperations() error {
 
 // Internal operation methods (without confirmation prompts)
 func (c *CLI) runModifyTelemetryInternal() error {
-	result, err := cleaner.ModifyTelemetryIDs()
-	if err != nil {
-		c.logError("Telemetry modification failed: %v", err)
-		return err
-	}
-	c.logInfo("Telemetry IDs modified successfully")
-	c.logBackupCreated("storage.json", result.StorageBackupPath)
-	return nil
+	return c.executeOperation("Telemetry modification", func() (interface{}, error) {
+		result, err := cleaner.ModifyTelemetryIDs()
+		if err == nil && result != nil {
+			c.logBackupCreated("storage.json", result.StorageBackupPath)
+		}
+		return result, err
+	})
 }
 
 func (c *CLI) runCleanDatabaseInternal() error {
-	result, err := cleaner.CleanAugmentData()
-	if err != nil {
-		c.logError("Database cleaning failed: %v", err)
-		return err
-	}
-	c.logInfo("Database cleaned successfully, deleted %d records", result.DeletedRows)
-	c.logBackupCreated("database", result.DBBackupPath)
-	return nil
+	return c.executeOperation("Database cleaning", func() (interface{}, error) {
+		result, err := cleaner.CleanAugmentData()
+		if err == nil && result != nil {
+			c.logInfo("Database cleaned successfully, deleted %d records", result.DeletedRows)
+			c.logBackupCreated("database", result.DBBackupPath)
+		}
+		return result, err
+	})
 }
 
 func (c *CLI) runCleanWorkspaceInternal() error {
-	result, err := cleaner.CleanWorkspaceStorage()
-	if err != nil {
-		c.logError("Workspace cleaning failed: %v", err)
-		return err
-	}
-	c.logInfo("Workspace cleaned successfully, deleted %d files", result.DeletedFilesCount)
-	c.logBackupCreated("workspace", result.BackupPath)
-	return nil
+	return c.executeOperation("Workspace cleaning", func() (interface{}, error) {
+		result, err := cleaner.CleanWorkspaceStorage()
+		if err == nil && result != nil {
+			c.logInfo("Workspace cleaned successfully, deleted %d files", result.DeletedFilesCount)
+			c.logBackupCreated("workspace", result.BackupPath)
+		}
+		return result, err
+	})
 }
 
 func (c *CLI) runCleanBrowserInternal() error {
-	browserCleaner, err := browser.NewBrowserCleaner()
-	if err != nil {
-		c.logError("Browser cleaner creation failed: %v", err)
-		return err
-	}
-
-	results, err := browserCleaner.CleanBrowserData(c.config.CreateBackups)
-	if err != nil {
-		c.logError("Browser cleaning failed: %v", err)
-		return err
-	}
-
-	// Count total items cleaned
-	totalItems := int64(0)
-	for _, result := range results {
-		totalItems += result.CookiesDeleted + result.StorageDeleted + result.CacheDeleted
-		if result.BackupPath != "" {
-			c.logBackupCreated("browser-"+result.Profile.Name, result.BackupPath)
+	return c.executeOperation("Browser cleaning", func() (interface{}, error) {
+		browserCleaner, err := browser.NewBrowserCleaner()
+		if err != nil {
+			return nil, err
 		}
-	}
 
-	c.logInfo("Browser data cleaned successfully, processed %d items", totalItems)
+		results, err := browserCleaner.CleanBrowserData(c.config.CreateBackups)
+		if err == nil && results != nil {
+			// Count total items cleaned and log backups
+			totalItems := int64(0)
+			for _, result := range results {
+				totalItems += result.CookiesDeleted + result.StorageDeleted + result.CacheDeleted
+				if result.BackupPath != "" {
+					c.logBackupCreated("browser-"+result.Profile.Name, result.BackupPath)
+				}
+			}
+			c.logInfo("Browser data cleaned successfully, processed %d items", totalItems)
+		}
+		return results, err
+	})
+}
+
+// executeOperation is a helper method to reduce code duplication
+func (c *CLI) executeOperation(operationName string, operation func() (interface{}, error)) error {
+	_, err := operation()
+	if err != nil {
+		c.logError("%s failed: %v", operationName, err)
+		return err
+	}
+	c.logInfo("%s completed successfully", operationName)
 	return nil
 }
 
@@ -604,30 +603,22 @@ func (c *CLI) printResult(operationName string, result interface{}) error {
 func (c *CLI) printTextResult(result interface{}) {
 	switch r := result.(type) {
 	case *cleaner.TelemetryModifyResult:
-		fmt.Printf("  Old Machine ID: %s\n", r.OldMachineID)
-		fmt.Printf("  New Machine ID: %s\n", r.NewMachineID)
-		fmt.Printf("  Old Device ID: %s\n", r.OldDeviceID)
-		fmt.Printf("  New Device ID: %s\n", r.NewDeviceID)
-		if r.StorageBackupPath != "" {
-			fmt.Printf("  Storage Backup: %s\n", r.StorageBackupPath)
-		}
-		if r.MachineIDBackupPath != "" {
-			fmt.Printf("  Machine ID Backup: %s\n", r.MachineIDBackupPath)
-		}
+		c.printField("Old Machine ID", r.OldMachineID)
+		c.printField("New Machine ID", r.NewMachineID)
+		c.printField("Old Device ID", r.OldDeviceID)
+		c.printField("New Device ID", r.NewDeviceID)
+		c.printFieldIf("Storage Backup", r.StorageBackupPath)
+		c.printFieldIf("Machine ID Backup", r.MachineIDBackupPath)
 
 	case *cleaner.DatabaseCleanResult:
-		fmt.Printf("  Records Deleted: %d\n", r.DeletedRows)
-		if r.DBBackupPath != "" {
-			fmt.Printf("  Database Backup: %s\n", r.DBBackupPath)
-		}
+		c.printField("Records Deleted", r.DeletedRows)
+		c.printFieldIf("Database Backup", r.DBBackupPath)
 
 	case *cleaner.WorkspaceCleanResult:
-		fmt.Printf("  Files Deleted: %d\n", r.DeletedFilesCount)
-		if r.BackupPath != "" {
-			fmt.Printf("  Workspace Backup: %s\n", r.BackupPath)
-		}
+		c.printField("Files Deleted", r.DeletedFilesCount)
+		c.printFieldIf("Workspace Backup", r.BackupPath)
 		if len(r.FailedOperations) > 0 {
-			fmt.Printf("  Failed Operations: %d\n", len(r.FailedOperations))
+			c.printField("Failed Operations", len(r.FailedOperations))
 		}
 
 	case []browser.BrowserCleanResult:
@@ -655,15 +646,26 @@ func (c *CLI) printTextResult(result interface{}) {
 		}
 
 		fmt.Printf("  Total Summary:\n")
-		fmt.Printf("    Total Cookies Deleted: %d\n", totalCookies)
-		fmt.Printf("    Total Storage Items Deleted: %d\n", totalStorage)
-		fmt.Printf("    Total Cache Items Deleted: %d\n", totalCache)
+		c.printField("    Total Cookies Deleted", totalCookies)
+		c.printField("    Total Storage Items Deleted", totalStorage)
+		c.printField("    Total Cache Items Deleted", totalCache)
 		if totalErrors > 0 {
-			fmt.Printf("    Total Errors: %d\n", totalErrors)
+			c.printField("    Total Errors", totalErrors)
 		}
 
 	default:
-		fmt.Printf("  Result: %+v\n", result)
+		c.printField("Result", result)
+	}
+}
+
+// Helper functions for printing formatted output
+func (c *CLI) printField(label string, value interface{}) {
+	fmt.Printf("  %s: %v\n", label, value)
+}
+
+func (c *CLI) printFieldIf(label, value string) {
+	if value != "" {
+		c.printField(label, value)
 	}
 }
 
